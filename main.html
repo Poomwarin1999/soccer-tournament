@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soccer Tournament</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f9fc;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        input[type="number"], input[type="text"], select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            width: calc(100% - 22px);
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+            color: #333;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #e0e0e0;
+        }
+        .highlight {
+            background-color: #d1e7dd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Soccer Tournament</h1>
+
+        <div class="form-group">
+            <label for="numPlayers">Number of Players:</label>
+            <input type="number" id="numPlayers" min="2" max="20">
+            <button onclick="generatePlayerInputs()">Submit</button>
+        </div>
+
+        <div id="playerNames"></div>
+        <div id="matchInput"></div>
+        <div id="scoreTable"></div>
+        <div id="matchHistory"></div>
+        <div id="matchStatus"></div>
+    </div>
+
+    <script>
+        let playerNames = [];
+        let matchHistory = [];
+        let matches = [];
+
+        function generatePlayerInputs() {
+            const numPlayers = document.getElementById("numPlayers").value;
+            const playerNamesDiv = document.getElementById("playerNames");
+            playerNamesDiv.innerHTML = "";
+
+            for (let i = 0; i < numPlayers; i++) {
+                const input = document.createElement("input");
+                input.type = "text";
+                input.placeholder = `Player ${i + 1} Name`;
+                input.id = `player${i + 1}`;
+                playerNamesDiv.appendChild(input);
+                playerNamesDiv.appendChild(document.createElement("br"));
+            }
+
+            const button = document.createElement("button");
+            button.textContent = "Next";
+            button.onclick = generateMatchInput;
+            playerNamesDiv.appendChild(button);
+        }
+
+        function generateMatchInput() {
+            const numPlayers = document.getElementById("numPlayers").value;
+            for (let i = 1; i <= numPlayers; i++) {
+                const name = document.getElementById(`player${i}`).value.trim();
+                if (name === "") {
+                    alert("Please enter names for all players.");
+                    return;
+                }
+                playerNames.push(name);
+            }
+
+            const matchInputDiv = document.getElementById("matchInput");
+            matchInputDiv.innerHTML = "";
+
+            const homeSelect = createPlayerSelect("homeTeam", "Home Team");
+            const awaySelect = createPlayerSelect("awayTeam", "Away Team");
+
+            matchInputDiv.appendChild(homeSelect);
+            matchInputDiv.appendChild(awaySelect);
+
+            const scoreInput = document.createElement("input");
+            scoreInput.type = "number";
+            scoreInput.id = "homeScore";
+            scoreInput.placeholder = "Home Score";
+            matchInputDiv.appendChild(scoreInput);
+
+            const scoreInput2 = document.createElement("input");
+            scoreInput2.type = "number";
+            scoreInput2.id = "awayScore";
+            scoreInput2.placeholder = "Away Score";
+            matchInputDiv.appendChild(scoreInput2);
+
+            const button = document.createElement("button");
+            button.textContent = "Update Scores";
+            button.onclick = updateScores;
+            matchInputDiv.appendChild(button);
+
+            generateMatchList();
+        }
+
+        function createPlayerSelect(id, label) {
+            const select = document.createElement("select");
+            select.id = id;
+
+            const defaultOption = document.createElement("option");
+            defaultOption.value = "";
+            defaultOption.text = label;
+            select.appendChild(defaultOption);
+
+            playerNames.forEach(name => {
+                const option = document.createElement("option");
+                option.value = name;
+                option.text = name;
+                select.appendChild(option);
+            });
+
+            return select;
+        }
+
+        let scores = {};
+
+        function updateScores() {
+            const homeTeam = document.getElementById("homeTeam").value;
+            const awayTeam = document.getElementById("awayTeam").value;
+            const homeScore = parseInt(document.getElementById("homeScore").value) || 0;
+            const awayScore = parseInt(document.getElementById("awayScore").value) || 0;
+
+            if (!homeTeam || !awayTeam || homeTeam === awayTeam) {
+                alert("Please select valid teams.");
+                return;
+            }
+
+            let match = matches.find(m => 
+                (m.homeTeam === homeTeam && m.awayTeam === awayTeam) ||
+                (m.homeTeam === awayTeam && m.awayTeam === homeTeam)
+            );
+
+            if (match && !match.completed) {
+                match.homeScore = homeScore;
+                match.awayScore = awayScore;
+                match.completed = true;
+
+                if (!scores[homeTeam]) {
+                    scores[homeTeam] = { wins: 0, losses: 0, draws: 0, goalsFor: 0, goalsAgainst: 0, points: 0, matchesPlayed: 0 };
+                }
+                if (!scores[awayTeam]) {
+                    scores[awayTeam] = { wins: 0, losses: 0, draws: 0, goalsFor: 0, goalsAgainst: 0, points: 0, matchesPlayed: 0 };
+                }
+
+                scores[homeTeam].goalsFor += homeScore;
+                scores[homeTeam].goalsAgainst += awayScore;
+                scores[awayTeam].goalsFor += awayScore;
+                scores[awayTeam].goalsAgainst += homeScore;
+
+                if (homeScore > awayScore) {
+                    scores[homeTeam].wins += 1;
+                    scores[homeTeam].points += 3;
+                    scores[awayTeam].losses += 1;
+                } else if (homeScore < awayScore) {
+                    scores[awayTeam].wins += 1;
+                    scores[awayTeam].points += 3;
+                    scores[homeTeam].losses += 1;
+                } else {
+                    scores[homeTeam].draws += 1;
+                    scores[awayTeam].draws += 1;
+                    scores[homeTeam].points += 1;
+                    scores[awayTeam].points += 1;
+                }
+
+                scores[homeTeam].matchesPlayed++;
+                scores[awayTeam].matchesPlayed++;
+
+                matchHistory.push({
+                    homeTeam,
+                    awayTeam,
+                    homeScore,
+                    awayScore
+                });
+
+                displayScoreTable();
+                displayMatchHistory();
+                displayMatchStatus();
+            } else {
+                alert("This match has already been played or is not found.");
+            }
+        }
+
+        function displayScoreTable() {
+            const scoreTableDiv = document.getElementById("scoreTable");
+            scoreTableDiv.innerHTML = "<h2>Score Table</h2>";
+            const table = document.createElement("table");
+
+            const header = table.createTHead();
+            const headerRow = header.insertRow(0);
+            headerRow.insertCell(0).innerHTML = "Team";
+            headerRow.insertCell(1).innerHTML = "MP";
+            headerRow.insertCell(2).innerHTML = "W";
+            headerRow.insertCell(3).innerHTML = "L";
+            headerRow.insertCell(4).innerHTML = "D";
+            headerRow.insertCell(5).innerHTML = "GF";
+            headerRow.insertCell(6).innerHTML = "GA";
+            headerRow.insertCell(7).innerHTML = "GD";
+            headerRow.insertCell(8).innerHTML = "Points";
+
+            const tbody = table.createTBody();
+            const sortedTeams = Object.keys(scores).sort((a, b) => {
+                if (scores[b].points === scores[a].points) {
+                    return (scores[b].goalsFor - scores[b].goalsAgainst) - (scores[a].goalsFor - scores[a].goalsAgainst);
+                }
+                return scores[b].points - scores[a].points;
+            });
+
+            sortedTeams.forEach(team => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerHTML = team;
+                row.insertCell(1).innerHTML = scores[team].matchesPlayed;
+                row.insertCell(2).innerHTML = scores[team].wins;
+                row.insertCell(3).innerHTML = scores[team].losses;
+                row.insertCell(4).innerHTML = scores[team].draws;
+                row.insertCell(5).innerHTML = scores[team].goalsFor;
+                row.insertCell(6).innerHTML = scores[team].goalsAgainst;
+                row.insertCell(7).innerHTML = scores[team].goalsFor - scores[team].goalsAgainst;
+                row.insertCell(8).innerHTML = scores[team].points;
+            });
+
+            scoreTableDiv.appendChild(table);
+        }
+
+        function displayMatchHistory() {
+            const matchHistoryDiv = document.getElementById("matchHistory");
+            matchHistoryDiv.innerHTML = "<h2>Match History</h2>";
+            const table = document.createElement("table");
+
+            const header = table.createTHead();
+            const headerRow = header.insertRow(0);
+            headerRow.insertCell(0).innerHTML = "Home Team";
+            headerRow.insertCell(1).innerHTML = "Away Team";
+            headerRow.insertCell(2).innerHTML = "Home Score";
+            headerRow.insertCell(3).innerHTML = "Away Score";
+
+            const tbody = table.createTBody();
+            matchHistory.forEach(match => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerHTML = match.homeTeam;
+                row.insertCell(1).innerHTML = match.awayTeam;
+                row.insertCell(2).innerHTML = match.homeScore;
+                row.insertCell(3).innerHTML = match.awayScore;
+            });
+
+            matchHistoryDiv.appendChild(table);
+        }
+
+        function displayMatchStatus() {
+            const matchStatusDiv = document.getElementById("matchStatus");
+            matchStatusDiv.innerHTML = "<h2>Match Status</h2>";
+            const table = document.createElement("table");
+
+            const header = table.createTHead();
+            const headerRow = header.insertRow(0);
+            headerRow.insertCell(0).innerHTML = "Home Team";
+            headerRow.insertCell(1).innerHTML = "Away Team";
+            headerRow.insertCell(2).innerHTML = "Home Score";
+            headerRow.insertCell(3).innerHTML = "Away Score";
+            headerRow.insertCell(4).innerHTML = "Status";
+
+            const tbody = table.createTBody();
+            matches.forEach(match => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerHTML = match.homeTeam;
+                row.insertCell(1).innerHTML = match.awayTeam;
+                row.insertCell(2).innerHTML = match.homeScore;
+                row.insertCell(3).innerHTML = match.awayScore;
+                row.insertCell(4).innerHTML = match.completed ? "Completed" : "Pending";
+            });
+
+            matchStatusDiv.appendChild(table);
+        }
+
+        function generateMatchList() {
+            const homeSelect = document.getElementById("homeTeam");
+            const awaySelect = document.getElementById("awayTeam");
+            matches = [];
+
+            for (let i = 0; i < playerNames.length; i++) {
+                for (let j = i + 1; j < playerNames.length; j++) {
+                    // Match home vs away
+                    matches.push({
+                        homeTeam: playerNames[i],
+                        awayTeam: playerNames[j],
+                        homeScore: 0,
+                        awayScore: 0,
+                        completed: false
+                    });
+                    // Match away vs home
+                    matches.push({
+                        homeTeam: playerNames[j],
+                        awayTeam: playerNames[i],
+                        homeScore: 0,
+                        awayScore: 0,
+                        completed: false
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>
